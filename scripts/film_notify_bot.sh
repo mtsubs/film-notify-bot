@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.0
+# Version: 1.0.1
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -59,7 +59,7 @@ TMDB_API_KEY="${TMDB_API_KEY}"
 TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"
 TELEGRAM_CHAT_IDS="${TELEGRAM_CHAT_IDS}"            # 支持多个，用空格分隔 / Multiple chat IDs
 
-MAX_OVERVIEW_LEN="${MAX_OVERVIEW_LEN}"              # 简介最大长度 / Max overview length: 500
+MAX_OVERVIEW_LEN="500"                              # 简介最大长度，默认500 / Max overview length, Default: 500
 
 # 确保去重文件存在 / Ensure dedup file exists
 [ ! -f "$DEDUP_FILE" ] && touch "$DEDUP_FILE"
