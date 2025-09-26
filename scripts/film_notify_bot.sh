@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.1
+# Version: 1.2
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -250,7 +250,7 @@ get_movie_list() {
 # 功能: 判断是否重复
 # Function: Check if TMDB ID is already sent
 is_duplicate() {
-    grep -Fq "^$1 " "$DEDUP_FILE"
+    grep -q "^$1 " "$DEDUP_FILE"
 }
 
 # 功能: 获取 TMDB 电影详细信息
@@ -365,11 +365,21 @@ IMDb：$IMDB_URL"
 # 功能: 清理一年以前的去重记录
 # Function: Remove deduplication records older than one year
 clean_old_dedup() {
-    TMP_FILE="/tmp/sent_tmdb_ids.tmp"
+    [ ! -f "$DEDUP_FILE" ] && touch "$DEDUP_FILE"
+
     NOW_TS=$(date +%s)
     YEAR_AGO=$((NOW_TS - 31536000))
-    [ ! -f "$DEDUP_FILE" ] && touch "$DEDUP_FILE"
-    awk -v cutoff="$YEAR_AGO" '{if($2>=cutoff) print $0}' "$DEDUP_FILE" > "$TMP_FILE"
+
+    sed -i -e '/^[[:space:]]*$/d' -e 's/[[:space:]]*$//' "$DEDUP_FILE"
+
+    TMP_FILE="/tmp/sent_tmdb_ids.tmp"
+    awk -v cutoff="$YEAR_AGO" '{
+        if ($2 >= cutoff) data[$1] = $0
+    }
+    END {
+        for (id in data) print data[id]
+    }' "$DEDUP_FILE" > "$TMP_FILE"
+
     mv "$TMP_FILE" "$DEDUP_FILE"
 }
 
