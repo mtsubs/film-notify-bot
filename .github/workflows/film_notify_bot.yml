@@ -1,0 +1,51 @@
+name: Film Notify Bot
+
+# ---------------- 触发条件 / Triggers ----------------
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # 每 6 小时运行一次 / Run every 6 hours
+  workflow_dispatch:        # 允许手动触发 / Allow manual trigger
+
+# ---------------- 权限 / Permissions ----------------
+permissions:
+  contents: write  # 允许写入仓库内容（提交去重文件） / Allow writing to repo for dedup file commit
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest  # 使用 Ubuntu 最新版本运行 / Use latest Ubuntu runner
+
+    # ---------------- 环境变量 / Environment Variables ----------------
+    env:
+      MDBLIST_API_KEY: ${{ secrets.MDBLIST_API_KEY }}       # MDblist API Key / MDblist API 密钥
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}             # TMDB API Key / TMDB API 密钥
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }} # Telegram Bot Token / Telegram 机器人令牌
+      MDBLIST_LIST_ID: ${{ secrets.MDBLIST_LIST_ID }}       # Watchlist ID / 监控列表 ID
+      TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}   # Telegram Chat IDs / 接收消息的聊天 ID，可多个用空格分隔
+      MAX_OVERVIEW_LEN: ${{ secrets.MAX_OVERVIEW_LEN }}     # Max overview length / 简介最大长度
+
+    steps:
+      # ---------------- 步骤 1️⃣ 检出仓库 / Checkout Repository ----------------
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        # 说明 / Description: 获取当前仓库代码，用于运行脚本并提交去重文件 / Get repository code to run script and commit dedup file
+
+      # ---------------- 步骤 2️⃣ 安装依赖 / Install Dependencies ----------------
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y bash jq curl git
+        # 说明 / Description: 安装脚本所需工具 / Install required tools for the script
+
+      # ---------------- 步骤 3️⃣ 运行通知脚本 / Run Film Notify Bot ----------------
+      - name: Run Film Notify Bot
+        run: |
+          chmod +x ./scripts/film_notify_bot.sh
+          ./scripts/film_notify_bot.sh
+        # 说明 / Description: 执行脚本获取新电影并输出 / Execute script to fetch new movies and print messages
+
+      # ---------------- 步骤 4️⃣ 提交更新后的去重文件 / Commit Updated Dedup File ----------------
+      - name: Commit updated dedup file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sent_tmdb_ids.txt
+          git diff-index --quiet HEAD || git commit -m "update: update sent_tmdb_ids.txt"
+          git push
