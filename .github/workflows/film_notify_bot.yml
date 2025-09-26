@@ -21,7 +21,6 @@ jobs:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }} # Telegram Bot Token / Telegram 机器人令牌
       MDBLIST_LIST_ID: ${{ secrets.MDBLIST_LIST_ID }}       # Watchlist ID / 监控列表 ID
       TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}   # Telegram Chat IDs / 接收消息的聊天 ID，可多个用空格分隔
-      MAX_OVERVIEW_LEN: ${{ secrets.MAX_OVERVIEW_LEN }}     # Max overview length / 简介最大长度
 
     steps:
       # ---------------- 步骤 1️⃣ 检出仓库 / Checkout Repository ----------------
