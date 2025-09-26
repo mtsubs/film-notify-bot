@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.0.1
+# Version: 1.1
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -384,8 +384,7 @@ if [ "$MOVIE_COUNT" -eq 0 ]; then
     exit 0
 fi
 
-echo "$MOVIE_ITEMS_JSON" | jq -c '.[]' | while read movie; do
-    TMDB_ID=$(echo "$movie" | jq -r '.id')
+for TMDB_ID in $(echo "$MOVIE_ITEMS_JSON" | jq -r '.[].id'); do
     if ! is_duplicate "$TMDB_ID"; then
         get_tmdb_info "$TMDB_ID"
         get_ratings "$TMDB_ID"
