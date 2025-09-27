@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.3.2
+# Version: 1.4
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -33,7 +33,6 @@
 #     维护去重文件以防重复通知。
 #
 # Dependencies / 依赖:
-#   - bash (>= 4.0)
 #   - curl
 #   - jq
 #   - git (if committing deduplication file back to repository)
@@ -49,17 +48,20 @@
 
 
 # ---------------- 配置 / Configuration ----------------
+VERSION=$(grep -m1 '^# Version:' "$0" | awk '{print $3}')
+SOURCE_URL=$(grep -m1 '^# Source:' "$0" | awk '{print $3}')
+UA_STRING="film_notify_bot/$VERSION (+$SOURCE_URL)"            # 用户代理 / User agent string
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DEDUP_FILE="$SCRIPT_DIR/sent_tmdb_ids.txt"          # 去重文件 / Deduplication file
-DATE_STR=$(TZ="Asia/Shanghai" date +"%m月%d日")      # 当前日期 / Current date
+DEDUP_FILE="$SCRIPT_DIR/sent_tmdb_ids.txt"                     # 去重文件 / Deduplication file
+DATE_STR=$(TZ="Asia/Shanghai" date +"%m月%d日")                 # 当前日期 / Current date
 
 MDBLIST_API_KEY="${MDBLIST_API_KEY}"
-MDBLIST_LIST_ID="${MDBLIST_LIST_ID}"                # 监控的列表 ID / Watchlist ID
+MDBLIST_LIST_ID="${MDBLIST_LIST_ID}"                            # 监控的列表 ID / Watchlist ID
 TMDB_API_KEY="${TMDB_API_KEY}"
 TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"
-TELEGRAM_CHAT_IDS="${TELEGRAM_CHAT_IDS}"            # 支持多个，用空格分隔 / Multiple chat IDs
+TELEGRAM_CHAT_IDS="${TELEGRAM_CHAT_IDS}"                        # 支持多个，用空格分隔 / Multiple chat IDs
 
-MAX_OVERVIEW_LEN="500"                              # 简介最大长度，默认500 / Max overview length, Default: 500
+MAX_OVERVIEW_LEN="500"                                          # 简介最大长度，默认500 / Max overview length, Default: 500
 
 # 确保去重文件存在 / Ensure dedup file exists
 [ ! -f "$DEDUP_FILE" ] && touch "$DEDUP_FILE"
@@ -252,7 +254,7 @@ format_score() {
 send_telegram() {
     MSG="$1"
     for CHAT_ID in $TELEGRAM_CHAT_IDS; do
-        curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        curl -s -A "$UA_STRING" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="$CHAT_ID" \
             -d text="$MSG" \
             -d parse_mode="HTML" >/dev/null
@@ -264,9 +266,9 @@ send_telegram() {
 # Function: Verify API token validity
 token_check_errors=""
 check_tokens() {
-    MDB_HTTP=$(curl -s -o /dev/null -w "%{http_code}" "https://api.mdblist.com/user?apikey=${MDBLIST_API_KEY}&format=json")
+    MDB_HTTP=$(curl -s -A "$UA_STRING" -o /dev/null -w "%{http_code}" "https://api.mdblist.com/user?apikey=${MDBLIST_API_KEY}&format=json")
     [ "$MDB_HTTP" != "200" ] && token_check_errors="$token_check_errors MDBLIST_API_KEY:$MDB_HTTP"
-    TMDB_HTTP=$(curl -s -o /dev/null -w "%{http_code}" "https://api.themoviedb.org/3/configuration?api_key=${TMDB_API_KEY}")
+    TMDB_HTTP=$(curl -s -A "$UA_STRING" -o /dev/null -w "%{http_code}" "https://api.themoviedb.org/3/configuration?api_key=${TMDB_API_KEY}")
     [ "$TMDB_HTTP" != "200" ] && token_check_errors="$token_check_errors TMDB_API_KEY:$TMDB_HTTP"
     if [ -n "$token_check_errors" ]; then
         ERR_MSG="⚠️ API Token 错误: $token_check_errors"
@@ -280,7 +282,7 @@ check_tokens() {
 # 功能: 获取今日电影列表
 # Function: Fetch today's movie list from MDBList
 get_movie_list() {
-    MOVIE_ITEMS_JSON=$(curl -s "https://api.mdblist.com/lists/${MDBLIST_LIST_ID}/items?apikey=${MDBLIST_API_KEY}&format=json&limit=100&order=asc&sort=releasedigital&unified=true")
+    MOVIE_ITEMS_JSON=$(curl -s -A "$UA_STRING" "https://api.mdblist.com/lists/${MDBLIST_LIST_ID}/items?apikey=${MDBLIST_API_KEY}&format=json&limit=100&order=asc&sort=releasedigital&unified=true")
 }
 
 # 功能: 判断是否重复
@@ -293,26 +295,26 @@ is_duplicate() {
 # Function: Fetch TMDB movie details
 get_tmdb_info() {
     TMDB_ID="$1"
-    TMDB_JSON=$(curl -s "https://api.themoviedb.org/3/movie/${TMDB_ID}?api_key=${TMDB_API_KEY}&language=zh-CN")
+    TMDB_JSON=$(curl -s -A "$UA_STRING" "https://api.themoviedb.org/3/movie/${TMDB_ID}?api_key=${TMDB_API_KEY}&language=zh-CN")
 }
 
 # 功能: 获取各评分
 # Function: Fetch IMDb, Letterboxd, Metacritic, RogerEbert, average scores
 get_ratings() {
     TMDB_ID="$1"
-    RATING_IMDB=$(curl -s -X POST "https://api.mdblist.com/rating/movie/imdb?apikey=${MDBLIST_API_KEY}" \
+    RATING_IMDB=$(curl -s -A "$UA_STRING" -X POST "https://api.mdblist.com/rating/movie/imdb?apikey=${MDBLIST_API_KEY}" \
         -H "Content-Type: application/json" \
         -d "{ \"ids\": [${TMDB_ID}], \"provider\": \"tmdb\" }" | jq -r '.ratings[0].rating // "N/A"')
-    RATING_LETTERBOXD=$(curl -s -X POST "https://api.mdblist.com/rating/movie/letterboxd?apikey=${MDBLIST_API_KEY}" \
+    RATING_LETTERBOXD=$(curl -s -A "$UA_STRING" -X POST "https://api.mdblist.com/rating/movie/letterboxd?apikey=${MDBLIST_API_KEY}" \
         -H "Content-Type: application/json" \
         -d "{ \"ids\": [${TMDB_ID}], \"provider\": \"tmdb\" }" | jq -r '.ratings[0].rating // "N/A"')
-    RATING_METACRITIC=$(curl -s -X POST "https://api.mdblist.com/rating/movie/metacritic?apikey=${MDBLIST_API_KEY}" \
+    RATING_METACRITIC=$(curl -s -A "$UA_STRING" -X POST "https://api.mdblist.com/rating/movie/metacritic?apikey=${MDBLIST_API_KEY}" \
         -H "Content-Type: application/json" \
         -d "{ \"ids\": [${TMDB_ID}], \"provider\": \"tmdb\" }" | jq -r '.ratings[0].rating // "N/A"')
-    RATING_ROGEREBERT=$(curl -s -X POST "https://api.mdblist.com/rating/movie/rogerebert?apikey=${MDBLIST_API_KEY}" \
+    RATING_ROGEREBERT=$(curl -s -A "$UA_STRING" -X POST "https://api.mdblist.com/rating/movie/rogerebert?apikey=${MDBLIST_API_KEY}" \
         -H "Content-Type: application/json" \
         -d "{ \"ids\": [${TMDB_ID}], \"provider\": \"tmdb\" }" | jq -r '.ratings[0].rating // "N/A"')
-    AVG_SCORE=$(curl -s -X POST "https://api.mdblist.com/rating/movie/score_average?apikey=${MDBLIST_API_KEY}" \
+    AVG_SCORE=$(curl -s -A "$UA_STRING" -X POST "https://api.mdblist.com/rating/movie/score_average?apikey=${MDBLIST_API_KEY}" \
         -H "Content-Type: application/json" \
         -d "{ \"ids\": [\"${TMDB_ID}\"], \"provider\": \"tmdb\" }" | jq -r '.ratings[0].rating // "N/A"')
 }
@@ -366,7 +368,7 @@ generate_and_send_msg() {
     IMDB_URL="https://www.imdb.com/title/${IMDB_ID}"
 
     # 获取美国可租/可买平台 / Get US rent/buy providers
-    ONLINE_STREAMS="$(curl -s "https://api.themoviedb.org/3/movie/${TMDB_ID}/watch/providers?api_key=${TMDB_API_KEY}" \
+    ONLINE_STREAMS="$(curl -s -A "$UA_STRING" "https://api.themoviedb.org/3/movie/${TMDB_ID}/watch/providers?api_key=${TMDB_API_KEY}" \
         | jq -r '[.results.US.rent[]?.provider_name, .results.US.buy[]?.provider_name] | unique | join(" / ")')"
     [ -z "$ONLINE_STREAMS" ] && ONLINE_STREAMS="已上线，暂无法确定提供平台"
 
