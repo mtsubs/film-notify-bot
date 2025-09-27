@@ -28,7 +28,9 @@ The bot can be deployed on local/private servers or run automatically via GitHub
 
 ## Acknowledgements
 
-Special thanks to [MDblist](https://mdblist.com/) and [TMDB](https://www.themoviedb.org/) for their services and APIs. We also appreciate GitHub for providing infrastructure and automation, enabling stable hosting and reliable bot operation.
+Special thanks to [MDBList](https://mdblist.com/) and [TMDB](https://www.themoviedb.org/) for their services and APIs.
+
+We also appreciate GitHub for providing infrastructure and automation, enabling stable hosting and reliable bot operation.
 
 ## Community
 
