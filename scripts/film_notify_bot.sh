@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.3.1
+# Version: 1.3.2
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
-# Source:https://github.com/MontageSubs/film_notify_bot/
+# Source: https://github.com/MontageSubs/film_notify_bot/
 #
 # Description / 描述:
 #   This script monitors new digital movie releases for the MontageSubs
