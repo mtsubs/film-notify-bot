@@ -60,6 +60,11 @@ IMDb：https://www.imdb.com/title/tt4957236/
 
 详细的部署步骤、API 配置与环境变量说明，请参阅 [DEPLOYMENT.md （部署说明）](./DEPLOYMENT.md)。
 
+### 仓库管理员操作
+对于本仓库管理员，可以前往 [Actions - Film Notify Bot 页面](https://github.com/MontageSubs/film-notify-bot/actions/workflows/film_notify_bot.yml) 点击页面右侧 「**Run workflow**」 手动触发新片检查。
+
+也可以前往 [Actions Secrets 设置](https://github.com/MontageSubs/film-notify-bot/settings/secrets/actions) 管理 Token 等环境变量。
+
 
 ## 致谢
 
