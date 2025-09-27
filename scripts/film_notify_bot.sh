@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.2
+# Version: 1.3
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -74,33 +74,53 @@ log_error() { printf "[ERROR] %s\n" "$1" >&2; }     # 错误信息 / Error
 # Function: Convert TMDB ISO language code to Chinese name
 lang_map() {
     case "$1" in
+        ar) echo "阿拉伯语" ;;
+        as) echo "阿萨姆语" ;;
+        bg) echo "保加利亚语" ;;
+        bn) echo "孟加拉语" ;;
+        cs) echo "捷克语" ;;
+        da) echo "丹麦语" ;;
+        de) echo "德语" ;;
+        el) echo "希腊语" ;;
         en) echo "英语" ;;
         es) echo "西班牙语" ;;
+        fa) echo "波斯语" ;;
+        fi) echo "芬兰语" ;;
         fr) echo "法语" ;;
-        de) echo "德语" ;;
+        gu) echo "古吉拉特语" ;;
+        he) echo "希伯来语" ;;
+        hi) echo "印地语" ;;
+        hr) echo "克罗地亚语" ;;
+        hu) echo "匈牙利语" ;;
+        id) echo "印尼语" ;;
+        is) echo "冰岛语" ;;
         it) echo "意大利语" ;;
         ja) echo "日语" ;;
+        kn) echo "卡纳达语" ;;
         ko) echo "韩语" ;;
-        zh) echo "中文" ;;
-        ru) echo "俄语" ;;
-        pt) echo "葡萄牙语" ;;
-        ar) echo "阿拉伯语" ;;
-        hi) echo "印地语" ;;
-        tr) echo "土耳其语" ;;
+        ml) echo "马拉雅拉姆语" ;;
+        mr) echo "马拉地语" ;;
         nl) echo "荷兰语" ;;
-        sv) echo "瑞典语" ;;
         no) echo "挪威语" ;;
-        fi) echo "芬兰语" ;;
-        da) echo "丹麦语" ;;
+        or) echo "奥里亚语" ;;
+        pa) echo "旁遮普语" ;;
         pl) echo "波兰语" ;;
-        th) echo "泰语" ;;
-        vi) echo "越南语" ;;
-        he) echo "希伯来语" ;;
-        el) echo "希腊语" ;;
-        cs) echo "捷克语" ;;
-        hu) echo "匈牙利语" ;;
+        pt) echo "葡萄牙语" ;;
         ro) echo "罗马尼亚语" ;;
+        ru) echo "俄语" ;;
+        sa) echo "梵语" ;;
+        sk) echo "斯洛伐克语" ;;
+        sl) echo "斯洛文尼亚语" ;;
+        sr) echo "塞尔维亚语" ;;
+        sv) echo "瑞典语" ;;
+        ta) echo "泰米尔语" ;;
+        te) echo "泰卢固语" ;;
+        th) echo "泰语" ;;
+        tr) echo "土耳其语" ;;
         uk) echo "乌克兰语" ;;
+        ur) echo "乌尔都语" ;;
+        vi) echo "越南语" ;;
+        zh) echo "中文" ;;
         *) echo "$1" ;;
     esac
 }
@@ -110,36 +130,52 @@ lang_map() {
 # Function: Convert TMDB country code to Chinese name
 country_map() {
     case "$1" in
-        US) echo "美国" ;;
-        GB|UK) echo "英国" ;;
-        FR) echo "法国" ;;
-        DE) echo "德国" ;;
-        IT) echo "意大利" ;;
-        ES) echo "西班牙" ;;
-        CN) echo "中国" ;;
-        JP) echo "日本" ;;
-        KR) echo "韩国" ;;
-        IN) echo "印度" ;;
-        RU) echo "俄罗斯" ;;
+        AR) echo "阿根廷" ;;
+        AT) echo "奥地利" ;;
+        AU) echo "澳大利亚" ;;
+        BE) echo "比利时" ;;
         BR) echo "巴西" ;;
         CA) echo "加拿大" ;;
-        AU) echo "澳大利亚" ;;
-        MX) echo "墨西哥" ;;
+        CH) echo "瑞士" ;;
+        CL) echo "智利" ;;
+        CN) echo "中国" ;;
+        CZ) echo "捷克" ;;
+        DE) echo "德国" ;;
+        DK) echo "丹麦" ;;
+        EG) echo "埃及" ;;
+        ES) echo "西班牙" ;;
+        FI) echo "芬兰" ;;
+        FR) echo "法国" ;;
+        GB|UK) echo "英国" ;;
+        GR) echo "希腊" ;;
         HK) echo "香港" ;;
-        TW) echo "台湾" ;;
+        HU) echo "匈牙利" ;;
+        IE) echo "爱尔兰" ;;
+        IL) echo "以色列" ;;
+        IN) echo "印度" ;;
+        IR) echo "伊朗" ;;
+        IT) echo "意大利" ;;
+        JP) echo "日本" ;;
+        KR) echo "韩国" ;;
+        MA) echo "摩洛哥" ;;
+        MX) echo "墨西哥" ;;
+        NL) echo "荷兰" ;;
+        NO) echo "挪威" ;;
+        NZ) echo "新西兰" ;;
+        PL) echo "波兰" ;;
+        PT) echo "葡萄牙" ;;
+        RO) echo "罗马尼亚" ;;
+        RU) echo "俄罗斯" ;;
+        SA) echo "沙特阿拉伯" ;;
+        SE) echo "瑞典" ;;
         SG) echo "新加坡" ;;
         TH) echo "泰国" ;;
+        TN) echo "突尼斯" ;;
         TR) echo "土耳其" ;;
-        NL) echo "荷兰" ;;
-        SE) echo "瑞典" ;;
-        NO) echo "挪威" ;;
-        DK) echo "丹麦" ;;
-        FI) echo "芬兰" ;;
-        PL) echo "波兰" ;;
-        AR) echo "阿根廷" ;;
-        CL) echo "智利" ;;
+        TW) echo "台湾" ;;
+        UA) echo "乌克兰" ;;
+        US) echo "美国" ;;
         ZA) echo "南非" ;;
-        EG) echo "埃及" ;;
         *) echo "$1" ;;
     esac
 }
@@ -234,7 +270,7 @@ check_tokens() {
     [ "$TMDB_HTTP" != "200" ] && token_check_errors="$token_check_errors TMDB_API_KEY:$TMDB_HTTP"
     if [ -n "$token_check_errors" ]; then
         ERR_MSG="⚠️ API Token 错误: $token_check_errors"
-        echo "$ERR_MSG"
+        log_error "$ERR_MSG"
         send_telegram "$ERR_MSG"
         exit 1
     fi
@@ -321,7 +357,7 @@ generate_and_send_msg() {
 
     # 获取制作公司 / Get production companies
     COMPANIES_CN="$(echo "$TMDB_JSON" | jq -r '.production_companies[].name' | while IFS= read -r co; do
-        echo -n "$(company_map "$co") / " # 映射为中文 / Map to Chinese
+        echo -n "$(company_map "$co") / "
     done)"
     COMPANIES_CN="$(echo "$COMPANIES_CN" | sed 's: / $::')"
  
@@ -358,7 +394,7 @@ generate_and_send_msg() {
 专业评分：Metacritic $RATING_METACRITIC_F | RogerEbert $RATING_ROGEREBERT_F
 
 IMDb：$IMDB_URL"
-    # echo "$MSG"
+    log_info "$MSG"
     send_telegram "$MSG" # 调用发送函数 / Call send function
 }
 
@@ -391,7 +427,7 @@ get_movie_list
 
 MOVIE_COUNT=$(echo "$MOVIE_ITEMS_JSON" | jq 'length')
 if [ "$MOVIE_COUNT" -eq 0 ]; then
-    echo "今日无新电影，脚本退出 / No new movies today, exiting."
+    log_info "今日无新电影，脚本退出 / No new movies today, exiting."
     exit 0
 fi
 
@@ -405,4 +441,4 @@ for TMDB_ID in $(echo "$MOVIE_ITEMS_JSON" | jq -r '.[].id'); do
     fi
 done
 
-echo "全部电影消息已发送完成 / All movie notifications sent."
+log_info "全部电影消息已发送完成 / All movie notifications sent."
