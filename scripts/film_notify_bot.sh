@@ -373,12 +373,13 @@ clean_old_dedup() {
     sed -i -e '/^[[:space:]]*$/d' -e 's/[[:space:]]*$//' "$DEDUP_FILE"
 
     TMP_FILE="/tmp/sent_tmdb_ids.tmp"
+    
     awk -v cutoff="$YEAR_AGO" '{
         if ($2 >= cutoff) data[$1] = $0
     }
     END {
         for (id in data) print data[id]
-    }' "$DEDUP_FILE" > "$TMP_FILE"
+    }' "$DEDUP_FILE" | sort -k2,2n > "$TMP_FILE"
 
     mv "$TMP_FILE" "$DEDUP_FILE"
 }
