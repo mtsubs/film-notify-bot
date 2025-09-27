@@ -1,6 +1,6 @@
 # Film Notify Bot
 
-**中文 | [English](./README.md)**
+**[中文](./README.md) | English**
 
 **Film Notify Bot** is a Telegram bot that tracks new digital movie releases and sends structured updates. It automatically shares movie titles, ratings, and platform information directly to your Telegram channel or group.
 
