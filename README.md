@@ -8,7 +8,7 @@
 
 蒙太奇字幕组专注于翻译小而精的电影，致力于提供高质量字幕内容。字幕制作团队需要及时获取最新数字发行电影的通知，以便快速评估和选择值得翻译的作品。
 
-通过 MDblist API 获取评分和发行列表，并结合 TMDB API 获取影片中文信息、制片公司、在线发行平台等数据，实现了自动化的新片监控和通知功能。
+通过 MDBList API 获取评分和发行列表，并结合 TMDB API 获取影片中文信息、制片公司、在线发行平台等数据，实现了自动化的新片监控和通知功能。
 
 ## 功能
 
@@ -68,7 +68,7 @@ IMDb：https://www.imdb.com/title/tt4957236/
 
 ## 致谢
 
-特别感谢 [MDblist](https://mdblist.com/) 与 [TMDB](https://www.themoviedb.org/) 提供的服务与 API，没有他们，这个项目无法实现。
+特别感谢 [MDBList](https://mdblist.com/) 与 [TMDB](https://www.themoviedb.org/) 提供的服务与 API，没有他们，这个项目无法实现。
 
 同时感谢 GitHub 提供基础设施与自动化环境，使项目能够稳定托管并高效运行。
 
