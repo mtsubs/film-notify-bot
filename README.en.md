@@ -17,7 +17,7 @@ MontageSubs (蒙太奇字幕组) is an independent volunteer team dedicated to d
 
 ## Official Channel & Bot
 
-- Telegram Channel: [@FilmNotify](https://t.me/s/FilmNotify)  
+- Telegram Channel: [@FilmNotify](https://t.me/+3drwnBP0yjszMmNh)  
 - Telegram Bot: [@FilmNotifyBot](https://t.me/FilmNotifyBot)  
 
 Currently, the bot sends notifications in Chinese only. It runs exclusively in designated channels and is not a public service at this time. If you’d like support for your language, feel free to open an Issue. We welcome all requests and will evaluate language support accordingly.
