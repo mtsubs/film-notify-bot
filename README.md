@@ -42,7 +42,7 @@ IMDb：https://www.imdb.com/title/tt4957236/
 
 #### 官方频道与机器人
 
-- Telegram 频道（新片推荐）：[@FilmNotify](https://t.me/s/FilmNotify)  
+- Telegram 频道（新片推荐）：[@FilmNotify](https://t.me/+3drwnBP0yjszMmNh)  
 - Telegram 机器人：[@FilmNotifyBot](https://t.me/FilmNotifyBot)
 
 该机器人（Bot）目前仅在指定的频道中运行。如果您希望接收相同的新片通知，或者希望将我们的机器人添加到您的群组或频道中，我们非常乐意提供支持。
