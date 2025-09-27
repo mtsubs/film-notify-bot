@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.4.1
+# Version: 1.5
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
-# Source: https://github.com/MontageSubs/film-notify-bot/
+# Source: https://github.com/MontageSubs/film_notify_bot/
 #
 # Description / 描述:
 #   This script monitors new digital movie releases for the MontageSubs
@@ -278,6 +278,42 @@ check_tokens() {
     fi
 }
 
+# ---------------- 前置检查 / Pre-checks ----------------
+# 功能: 检查必须的环境变量是否为空
+# Function: Ensure required environment variables are set
+check_env_vars() {
+    missing_vars=""
+    for var in MDBLIST_API_KEY MDBLIST_LIST_ID TMDB_API_KEY TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_IDS; do
+        if [ -z "${!var}" ]; then
+            missing_vars="$missing_vars $var"
+        fi
+    done
+
+    if [ -n "$missing_vars" ]; then
+        log_error "缺少必要环境变量 / Missing required environment variables: $missing_vars"
+        log_error "请检查是否忘记在运行前配置这些变量 / Please check if you forgot to set these variables before running."
+        exit 1
+    fi
+}
+
+# 功能: 检查依赖命令是否存在
+# Function: Ensure required dependencies are installed
+check_dependencies() {
+    missing_deps=""
+    for dep in curl jq; do
+        if ! command -v "$dep" >/dev/null 2>&1; then
+            missing_deps="$missing_deps $dep"
+        fi
+    done
+
+    if [ -n "$missing_deps" ]; then
+        log_error "缺少必要依赖 / Missing required dependencies: $missing_deps"
+        log_error "请安装上述依赖后再运行脚本 / Please install the above dependencies before running the script."
+        exit 1
+    fi
+}
+
+
 # ---------------- 数据获取 / Data Retrieval ----------------
 # 功能: 获取今日电影列表
 # Function: Fetch today's movie list from MDBList
@@ -423,6 +459,8 @@ clean_old_dedup() {
 }
 
 # ---------------- 主流程 / Main Flow ----------------
+check_env_vars
+check_dependencies
 check_tokens
 clean_old_dedup
 get_movie_list
