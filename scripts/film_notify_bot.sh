@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.3
+# Version: 1.3.1
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -280,7 +280,7 @@ check_tokens() {
 # 功能: 获取今日电影列表
 # Function: Fetch today's movie list from MDBList
 get_movie_list() {
-    MOVIE_ITEMS_JSON=$(curl -s "https://api.mdblist.com/lists/${MDBLIST_LIST_ID}/items?apikey=${MDBLIST_API_KEY}&format=json&limit=100&order=desc&sort=releasedigital&unified=true")
+    MOVIE_ITEMS_JSON=$(curl -s "https://api.mdblist.com/lists/${MDBLIST_LIST_ID}/items?apikey=${MDBLIST_API_KEY}&format=json&limit=100&order=asc&sort=releasedigital&unified=true")
 }
 
 # 功能: 判断是否重复
