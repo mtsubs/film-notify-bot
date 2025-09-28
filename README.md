@@ -21,23 +21,27 @@
 ### 消息预览
 
 ```text
-9月24日 - 《宇宙自助洗衣店 （Cosmos Laundromat）》 （2015） 已上线
+《宇宙自助洗衣店 （Cosmos Laundromat）》 （2015） 已上线
 
 简介：在一个荒凉的小岛，自杀羊弗兰克满足他的命运在一个古怪的推销员，谁提供他一生的
 礼物。他一点也不知道，他只能处理这么多的“寿命”。
 
-语言：英语
-国家：荷兰
-类型：动画 / 科幻
+影院上映：2015-08-10
+数字上线：2015-08-10
+
+语言：#英语
+国家：#荷兰
+类型：#动画 / #科幻
 时长：12 分钟
 发行商：Blender 基金会
 在线发行：Blender Open Movie
 
-综合评价：61 / 100
+综合评分：61 / 100
 网友评分：IMDb 6.8 / 10 | Letterboxd 3.3 / 5
-专业评分：Metacritic 暂无评分 | RogerEbert 暂无评分
+专业评分：Metacritic 暂无 | RogerEbert 暂无
 
 IMDb：https://www.imdb.com/title/tt4957236/
+#宇宙自助洗衣店 #CosmosLaundromat
 ```
 
 #### 官方频道与机器人
