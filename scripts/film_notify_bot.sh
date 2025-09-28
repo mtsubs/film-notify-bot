@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.7.4
+# Version: 1.8
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -34,7 +34,6 @@
 # Dependencies / 依赖:
 #   - curl
 #   - jq
-#   - git (if committing deduplication file back to repository)
 #
 # Usage / 用法:
 #   ./film_notify_bot.sh
@@ -45,14 +44,14 @@
 #     格式化电影消息打印到 stdout（或通过 Telegram 发送）
 #     更新 'sent_tmdb_ids.txt' 文件，记录已处理的电影 ID
 
-# ---------------- API Keys and IDs / API Key 与列表 ID ----------------
-# WARNING / 警告
-# In GitHub Actions, do NOT modify this section directly.
-# All variables should be provided via repository Secrets.
-# Please add them in the repository settings under "Secrets and variables".
+# ---------------- API Key 与列表 ID / API Keys and IDs ----------------
+# 警告 / WARNING
 # 在 GitHub Actions 中，请勿直接修改此段。
 # 所有变量应通过仓库的 Repository Secrets 注入。
 # 请在仓库设置中的 “Secrets and variables” 中添加。
+# In GitHub Actions, do NOT modify this section directly.
+# All variables should be provided via repository Secrets.
+# Please add them in the repository settings under "Secrets and variables".
 MDBLIST_API_KEY="${MDBLIST_API_KEY}"       # MDBList API Key
 MDBLIST_LIST_ID="${MDBLIST_LIST_ID}"       # Watchlist ID / 监控列表 ID
 TMDB_API_KEY="${TMDB_API_KEY}"             # TMDB API Key
@@ -61,13 +60,13 @@ TELEGRAM_CHAT_IDS="${TELEGRAM_CHAT_IDS}"   # Target chat IDs (space separated) /
 BUTTON_URL="${TELEGRAM_BUTTON_URL}"        # Telegram Button URL / Telegram 按钮链接
 
 # ---------------- 配置 / Configuration ----------------
-# Script directory / 脚本所在目录
+# 脚本所在目录 / Script directory
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Deduplication file to track sent TMDB IDs / 去重文件，用于记录已发送的 TMDB 电影 ID
+# 去重文件，用于记录已发送的 TMDB 电影 ID / Deduplication file to track sent TMDB IDs
 DEDUP_FILE="$SCRIPT_DIR/sent_tmdb_ids.txt"
 
-# Maximum overview length / 简介最大长度，默认 300
+# 简介最大长度，默认 300 / Maximum overview length
 MAX_OVERVIEW_LEN="300"
 
 # 确保去重文件存在 / Ensure dedup file exists
@@ -375,6 +374,102 @@ generate_and_send_msg() {
     TITLE_CN="$(echo "$TMDB_JSON" | jq -r '.title')"
     TITLE_EN="$(echo "$TMDB_JSON" | jq -r '.original_title')"
 
+    # 构造标题显示 / Build display title
+    if [ -n "$TITLE_CN" ] && [ "$TITLE_CN" != "null" ]; then
+        DISPLAY_TITLE="《$TITLE_CN（$TITLE_EN）》"
+    else
+        DISPLAY_TITLE="$TITLE_EN"
+    fi
+
+    # 从上映日期提取年份 / Extract release year from release date
+    RELEASE_YEAR="$(echo "$TMDB_JSON" | jq -r '.release_date' | cut -d- -f1)"
+    [ -z "$RELEASE_YEAR" ] || [ "$RELEASE_YEAR" = "null" ] && RELEASE_YEAR="未知"
+
+    # 获取电影简介 / Get movie overview
+    OVERVIEW="$(echo "$TMDB_JSON" | jq -r '.overview')"
+    [ "$OVERVIEW" = "null" ] && OVERVIEW="暂无简介"
+    [ ${#OVERVIEW} -gt $MAX_OVERVIEW_LEN ] && OVERVIEW="${OVERVIEW:0:$MAX_OVERVIEW_LEN}..."
+
+    # 获取上映日期 / Get release date
+    MDB_MOVIE_JSON=$(curl -s -A "$UA_STRING" "https://api.mdblist.com/tmdb/movie/${TMDB_ID}?apikey=${MDBLIST_API_KEY}&append_to_response=keyword&format=json")
+    RELEASED_CINEMA=$(echo "$MDB_MOVIE_JSON" | jq -r '.released // "未定"')
+    RELEASED_DIGITAL=$(echo "$MDB_MOVIE_JSON" | jq -r '.released_digital // "未上线"')
+
+    # 获取电影语言 / Get spoken languages
+    LANGS="$(echo "$TMDB_JSON" | jq -r '.spoken_languages[].iso_639_1')"
+    LANG_CN=""
+    for l in $LANGS; do
+        L_CLEAN=$(lang_map "$l" | sed 's/[[:space:][:punct:]]//g')
+        [ -n "$L_CLEAN" ] && LANG_CN="$LANG_CN#$L_CLEAN / "
+    done
+    LANG_CN="${LANG_CN% / }"
+
+    # 获取电影类型 / Get movie genres
+    GENRES_RAW="$(echo "$TMDB_JSON" | jq -r '[.genres[].name] | join(" / ")')"
+    GENRES=""
+    if [ -n "$GENRES_RAW" ] && [ "$GENRES_RAW" != "null" ]; then
+        IFS=' / ' read -ra GEN_ARRAY <<< "$GENRES_RAW"
+        for g in "${GEN_ARRAY[@]}"; do
+            G_CLEAN=$(echo "$g" | sed 's/[[:space:][:punct:]]//g')
+            [ -n "$G_CLEAN" ] && GENRES="$GENRES#$G_CLEAN / "
+        done
+        GENRES="${GENRES% / }"
+    fi
+
+    # 获取电影时长（分钟） / Get movie runtime in minutes
+    RUNTIME="$(echo "$TMDB_JSON" | jq -r '.runtime')"
+    if [ "$RUNTIME" = "null" ] || [ -z "$RUNTIME" ] || [ "$RUNTIME" -eq 0 ]; then
+        RUNTIME_DISPLAY="暂无时长信息"
+    else
+        # 换算成小时+分钟 / Conversion time
+        if [ "$RUNTIME" -ge 60 ]; then
+            HOURS="$((RUNTIME / 60))"
+            MINUTES="$((RUNTIME % 60))"
+            RUNTIME_DISPLAY="${RUNTIME} 分钟 （${HOURS} 小时 ${MINUTES} 分钟）"
+        else
+            RUNTIME_DISPLAY="${RUNTIME} 分钟"
+        fi
+    fi
+
+    # 获取制作国家 / Get production countries
+    COUNTRIES="$(echo "$TMDB_JSON" | jq -r '.production_countries[].iso_3166_1')"
+    COUNTRIES_CN=""
+    for c in $COUNTRIES; do
+        C_CLEAN=$(country_map "$c" | sed 's/[[:space:][:punct:]]//g')
+        [ -n "$C_CLEAN" ] && COUNTRIES_CN="$COUNTRIES_CN#$C_CLEAN / "
+    done
+    COUNTRIES_CN="${COUNTRIES_CN% / }"
+
+    # 获取制作公司 / Get production companies
+    COMPANIES_CN="$(echo "$TMDB_JSON" | jq -r '.production_companies[].name' | while IFS= read -r co; do
+        echo -n "$(company_map "$co") / "
+    done)"
+    COMPANIES_CN="$(echo "$COMPANIES_CN" | sed 's: / $::')"
+
+    # 获取美国可租/可买平台 / Get US rent/buy providers
+    ONLINE_STREAMS="$(curl -s -A "$UA_STRING" "https://api.themoviedb.org/3/movie/${TMDB_ID}/watch/providers?api_key=${TMDB_API_KEY}" \
+        | jq -r '[.results.US.rent[]?.provider_name, .results.US.buy[]?.provider_name] | unique | join(" / ")')"
+    [ -z "$ONLINE_STREAMS" ] && ONLINE_STREAMS="暂无上线信息"
+
+    # 将各类评分格式化显示 / Format different scores
+    RATING_IMDB_F="$(format_score "$RATING_IMDB" "imdb")"
+    RATING_LETTERBOXD_F="$(format_score "$RATING_LETTERBOXD" "letterboxd")"
+    RATING_METACRITIC_F="$(format_score "$RATING_METACRITIC" "metacritic")"
+    RATING_ROGEREBERT_F="$(format_score "$RATING_ROGEREBERT" "rogerebert")"
+    AVG_SCORE_F="$(format_score "$AVG_SCORE" "avg")"
+
+    # 构造 IMDb 链接 / Construct IMDb URL
+    IMDB_ID="$(echo "$TMDB_JSON" | jq -r '.imdb_id')"
+    if [ "$IMDB_ID" = "null" ] || [ -z "$IMDB_ID" ]; then
+        if [ -n "$TMDB_ID" ]; then
+            DB_URL="https://www.themoviedb.org/movie/${TMDB_ID}"
+        else
+            DB_URL="暂无资料链接"
+        fi
+    else
+        DB_URL="https://www.imdb.com/title/${IMDB_ID}"
+    fi
+
     # 生成电影片名标签 / Generate movie title tags
     if [ -n "$TITLE_CN" ] && [ "$TITLE_CN" != "null" ]; then
         TITLE_CN_CLEAN=$(echo "$TITLE_CN" | sed 's/[[:space:][:punct:]]//g')
@@ -398,82 +493,8 @@ generate_and_send_msg() {
         TAGS=""
     fi
 
-    # 从上映日期提取年份 / Extract release year from release date
-    RELEASE_YEAR="$(echo "$TMDB_JSON" | jq -r '.release_date' | cut -d- -f1)"
-
-    # 获取电影简介 / Get movie overview
-    OVERVIEW="$(echo "$TMDB_JSON" | jq -r '.overview')"
-    [ ${#OVERVIEW} -gt $MAX_OVERVIEW_LEN ] && OVERVIEW="${OVERVIEW:0:$MAX_OVERVIEW_LEN}..."
-
-    # 获取电影时长（分钟） / Get movie runtime in minutes
-    RUNTIME="$(echo "$TMDB_JSON" | jq -r '.runtime')"
-
-    # 换算成小时+分钟 / Conversion time
-    if [ "$RUNTIME" -ge 60 ]; then
-        HOURS="$((RUNTIME / 60))"
-        MINUTES="$((RUNTIME % 60))"
-        RUNTIME_DISPLAY="${RUNTIME} 分钟 （${HOURS} 小时 ${MINUTES} 分钟）"
-    else
-        RUNTIME_DISPLAY="${RUNTIME} 分钟"
-    fi
-
-    # 获取电影类型 / Get movie genres
-    GENRES_RAW="$(echo "$TMDB_JSON" | jq -r '[.genres[].name] | join(" / ")')"
-    GENRES=""
-    if [ -n "$GENRES_RAW" ] && [ "$GENRES_RAW" != "null" ]; then
-        IFS=' / ' read -ra GEN_ARRAY <<< "$GENRES_RAW"
-        for g in "${GEN_ARRAY[@]}"; do
-            G_CLEAN=$(echo "$g" | sed 's/[[:space:][:punct:]]//g')
-            [ -n "$G_CLEAN" ] && GENRES="$GENRES#$G_CLEAN / "
-        done
-        GENRES="${GENRES% / }"
-    fi
-
-    # 获取电影语言 / Get spoken languages
-    LANGS="$(echo "$TMDB_JSON" | jq -r '.spoken_languages[].iso_639_1')"
-    LANG_CN=""
-    for l in $LANGS; do
-        LANG_CN="$LANG_CN$(lang_map "$l") / "
-    done
-    LANG_CN="$(echo "$LANG_CN" | sed 's: / $::')"
-
-    # 获取制作国家 / Get production countries
-    COUNTRIES="$(echo "$TMDB_JSON" | jq -r '.production_countries[].iso_3166_1')"
-    COUNTRIES_CN=""
-    for c in $COUNTRIES; do
-        COUNTRIES_CN="$COUNTRIES_CN$(country_map "$c") / "
-    done
-    COUNTRIES_CN="$(echo "$COUNTRIES_CN" | sed 's: / $::')"
-
-    # 获取制作公司 / Get production companies
-    COMPANIES_CN="$(echo "$TMDB_JSON" | jq -r '.production_companies[].name' | while IFS= read -r co; do
-        echo -n "$(company_map "$co") / "
-    done)"
-    COMPANIES_CN="$(echo "$COMPANIES_CN" | sed 's: / $::')"
-
-    # 构造 IMDb 链接 / Construct IMDb URL
-    IMDB_ID="$(echo "$TMDB_JSON" | jq -r '.imdb_id')"
-    IMDB_URL="https://www.imdb.com/title/${IMDB_ID}"
-
-    # 获取美国可租/可买平台 / Get US rent/buy providers
-    ONLINE_STREAMS="$(curl -s -A "$UA_STRING" "https://api.themoviedb.org/3/movie/${TMDB_ID}/watch/providers?api_key=${TMDB_API_KEY}" \
-        | jq -r '[.results.US.rent[]?.provider_name, .results.US.buy[]?.provider_name] | unique | join(" / ")')"
-    [ -z "$ONLINE_STREAMS" ] && ONLINE_STREAMS="暂无上线信息"
-
-    # 获取上映日期 / Get release date
-    MDB_MOVIE_JSON=$(curl -s -A "$UA_STRING" "https://api.mdblist.com/tmdb/movie/${TMDB_ID}?apikey=${MDBLIST_API_KEY}&append_to_response=keyword&format=json")
-    RELEASED_CINEMA=$(echo "$MDB_MOVIE_JSON" | jq -r '.released // "未定"')
-    RELEASED_DIGITAL=$(echo "$MDB_MOVIE_JSON" | jq -r '.released_digital // "未上线"')
-
-    # 将各类评分格式化显示 / Format different scores
-    RATING_IMDB_F="$(format_score "$RATING_IMDB" "imdb")"
-    RATING_LETTERBOXD_F="$(format_score "$RATING_LETTERBOXD" "letterboxd")"
-    RATING_METACRITIC_F="$(format_score "$RATING_METACRITIC" "metacritic")"
-    RATING_ROGEREBERT_F="$(format_score "$RATING_ROGEREBERT" "rogerebert")"
-    AVG_SCORE_F="$(format_score "$AVG_SCORE" "avg")"
-
     # 将所有信息拼接为一条消息 / Combine all info into one message
-    MSG="《$TITLE_CN （$TITLE_EN）》 （$RELEASE_YEAR） 已上线
+    MSG="$DISPLAY_TITLE（$RELEASE_YEAR） 已上线
 
 简介：$OVERVIEW
 
@@ -484,14 +505,14 @@ generate_and_send_msg() {
 国家：$COUNTRIES_CN
 类型：$GENRES
 时长：$RUNTIME_DISPLAY
-发行商：$COMPANIES_CN
+制作公司：$COMPANIES_CN
 在线发行：$ONLINE_STREAMS
 
 综合评分：$AVG_SCORE_F
 网友评分：IMDb $RATING_IMDB_F | Letterboxd $RATING_LETTERBOXD_F
 专业评分：Metacritic $RATING_METACRITIC_F | RogerEbert $RATING_ROGEREBERT_F
 
-IMDb：$IMDB_URL
+外部资料：$DB_URL
 $TAGS"
     log_info "$MSG"
     send_telegram "$MSG" # 调用发送函数 / Call send function
