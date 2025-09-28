@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.6
+# Version: 1.6.1
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -323,41 +323,6 @@ check_dependencies() {
     fi
 }
 
-# ---------------- 随机化 GitHub Actions cron 基于注释 / Randomize GitHub Actions cron based on comment ----------------
-randomize_github_cron() {
-    WORKFLOW_FILE="$SCRIPT_DIR/../.github/workflows/film_notify_bot.yml"
-
-    # 仅在 GitHub Actions 环境下执行 / Only execute in GitHub Actions environment
-    if [ -z "$GITHUB_REPOSITORY" ]; then
-        return
-    fi
-
-    CRON_LINE=$(grep "cron:" "$WORKFLOW_FILE" | head -n1)
-    COMMENT_REPO=$(echo "$CRON_LINE" | sed -n 's/.*Randomized:1 repo:\([a-zA-Z0-9_.-\/]*\).*/\1/p')
-    NEED_RANDOM=0
-
-    if [ "$COMMENT_REPO" != "$GITHUB_REPOSITORY" ]; then
-        NEED_RANDOM=1
-    else
-        echo "$CRON_LINE" | grep -q "Randomized:1"
-        if [ $? -ne 0 ]; then
-            NEED_RANDOM=1
-        fi
-    fi
-
-    if [ "$NEED_RANDOM" -eq 1 ]; then
-        HOUR=$(expr $RANDOM % 24)
-        MIN=$(expr $RANDOM % 60)
-        TMP_FILE="${WORKFLOW_FILE}.tmp"
-        sed "s/cron:.*/cron: '$MIN $HOUR-23\/6 * * *'  # Randomized:1 repo:${GITHUB_REPOSITORY}/" "$WORKFLOW_FILE" > "$TMP_FILE"
-        mv "$TMP_FILE" "$WORKFLOW_FILE"
-
-        echo "[INFO] Workflow cron randomized to $MIN $HOUR-23/6"
-    else
-        echo "[INFO] Using existing randomized time, no cron modification needed"
-    fi
-}
-
 # ---------------- 数据获取 / Data Retrieval ----------------
 # 功能: 获取今日电影列表
 # Function: Fetch today's movie list from MDBList
@@ -523,7 +488,6 @@ log_info "User-Agent: $UA_STRING"
 check_env_vars
 check_dependencies
 check_tokens
-randomize_github_cron
 clean_old_dedup
 get_movie_list
 
