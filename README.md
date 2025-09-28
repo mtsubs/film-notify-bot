@@ -1,5 +1,10 @@
 # Film Notify Bot
 
+[![Film Notify Bot status](https://github.com/MontageSubs/film-notify-bot/actions/workflows/film_notify_bot.yml/badge.svg)](https://github.com/MontageSubs/film-notify-bot/actions/workflows/film_notify_bot.yml) | 
+[![Telegram](https://img.shields.io/badge/Telegram-订阅-blue?logo=telegram&style=flat-square)](https://t.me/+3drwnBP0yjszMmNh) | 
+[![IRC](https://img.shields.io/badge/IRC-加入聊天-brightgreen?logo=irc&style=flat-square)](https://web.libera.chat/#MontageSubs)
+
+
 **中文 | [English](./README.en.md)**
 
 **Film Notify Bot** 是一个 Telegram 机器人，自动监控最新数字发行电影并生成结构化消息。它将新片信息直接发送到指定频道或群组，帮助用户及时了解最新数字发行电影及相关信息。
