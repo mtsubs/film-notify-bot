@@ -41,7 +41,7 @@
 专业评分：Metacritic 暂无评分 | RogerEbert 暂无评分
 
 IMDb：https://www.imdb.com/title/tt4957236/
-#宇宙自助洗衣店 #Cosmos Laundromat
+#宇宙自助洗衣店 #CosmosLaundromat
 ```
 
 #### 官方频道与机器人
