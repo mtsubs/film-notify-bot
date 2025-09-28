@@ -38,7 +38,7 @@
 
 综合评分：61 / 100
 网友评分：IMDb 6.8 / 10 | Letterboxd 3.3 / 5
-专业评分：Metacritic 暂无评分 | RogerEbert 暂无评分
+专业评分：Metacritic 暂无 | RogerEbert 暂无
 
 IMDb：https://www.imdb.com/title/tt4957236/
 #宇宙自助洗衣店 #CosmosLaundromat
