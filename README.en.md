@@ -1,5 +1,10 @@
 # Film Notify Bot
 
+[![Film Notify Bot status](https://github.com/MontageSubs/film-notify-bot/actions/workflows/film_notify_bot.yml/badge.svg)](https://github.com/MontageSubs/film-notify-bot/actions/workflows/film_notify_bot.yml) | 
+[![Telegram](https://img.shields.io/badge/Telegram-Subscribe-blue?logo=telegram&style=flat-square)](https://t.me/+3drwnBP0yjszMmNh) | 
+[![IRC](https://img.shields.io/badge/IRC-Join%20Chat-brightgreen?logo=irc&style=flat-square)](https://web.libera.chat/#MontageSubs)
+
+
 **[中文](./README.md) | English**
 
 **Film Notify Bot** is a Telegram bot that tracks new digital movie releases and sends structured updates. It automatically shares movie titles, ratings, and platform information directly to your Telegram channel or group.
