@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.8
+# Version: 1.8.1
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -387,7 +387,14 @@ generate_and_send_msg() {
 
     # 获取电影简介 / Get movie overview
     OVERVIEW="$(echo "$TMDB_JSON" | jq -r '.overview')"
-    [ "$OVERVIEW" = "null" ] && OVERVIEW="暂无简介"
+
+    if [ -z "$OVERVIEW" ] || [ "$OVERVIEW" = "null" ]; then
+        TMDB_JSON_EN=$(curl -s -A "$UA_STRING" "https://api.themoviedb.org/3/movie/${TMDB_ID}?api_key=${TMDB_API_KEY}")
+        OVERVIEW="$(echo "$TMDB_JSON_EN" | jq -r '.overview')"
+    fi
+        if [ -z "$OVERVIEW" ] || [ "$OVERVIEW" = "null" ]; then
+        OVERVIEW="暂无简介"
+    fi
     [ ${#OVERVIEW} -gt $MAX_OVERVIEW_LEN ] && OVERVIEW="${OVERVIEW:0:$MAX_OVERVIEW_LEN}..."
 
     # 获取上映日期 / Get release date
@@ -403,6 +410,7 @@ generate_and_send_msg() {
         [ -n "$L_CLEAN" ] && LANG_CN="$LANG_CN#$L_CLEAN / "
     done
     LANG_CN="${LANG_CN% / }"
+    [ -z "$LANG_CN" ] && LANG_CN="未知"
 
     # 获取电影类型 / Get movie genres
     GENRES_RAW="$(echo "$TMDB_JSON" | jq -r '[.genres[].name] | join(" / ")')"
@@ -415,6 +423,7 @@ generate_and_send_msg() {
         done
         GENRES="${GENRES% / }"
     fi
+    [ -z "$GENRES" ] && GENRES="未知"
 
     # 获取电影时长（分钟） / Get movie runtime in minutes
     RUNTIME="$(echo "$TMDB_JSON" | jq -r '.runtime')"
@@ -439,12 +448,14 @@ generate_and_send_msg() {
         [ -n "$C_CLEAN" ] && COUNTRIES_CN="$COUNTRIES_CN#$C_CLEAN / "
     done
     COUNTRIES_CN="${COUNTRIES_CN% / }"
+    [ -z "$COUNTRIES_CN" ] && COUNTRIES_CN="未知"
 
     # 获取制作公司 / Get production companies
     COMPANIES_CN="$(echo "$TMDB_JSON" | jq -r '.production_companies[].name' | while IFS= read -r co; do
         echo -n "$(company_map "$co") / "
     done)"
     COMPANIES_CN="$(echo "$COMPANIES_CN" | sed 's: / $::')"
+    [ -z "$COMPANIES_CN" ] && COMPANIES_CN="未知" 
 
     # 获取美国可租/可买平台 / Get US rent/buy providers
     ONLINE_STREAMS="$(curl -s -A "$UA_STRING" "https://api.themoviedb.org/3/movie/${TMDB_ID}/watch/providers?api_key=${TMDB_API_KEY}" \
@@ -472,7 +483,7 @@ generate_and_send_msg() {
 
     # 生成电影片名标签 / Generate movie title tags
     if [ -n "$TITLE_CN" ] && [ "$TITLE_CN" != "null" ]; then
-        TITLE_CN_CLEAN=$(echo "$TITLE_CN" | sed 's/[[:space:][:punct:]]//g')
+        TITLE_CN_CLEAN=$(echo "$TITLE_CN" | sed 's/[^一-龥0-9a-zA-Z：。，！？；、（）《》“”‘’]//g')
         [ -n "$TITLE_CN_CLEAN" ] && TAG_CN="#$TITLE_CN_CLEAN" || TAG_CN=""
     else
         TAG_CN=""
