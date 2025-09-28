@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.8.1
+# Version: 1.8.2
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -483,7 +483,7 @@ generate_and_send_msg() {
 
     # 生成电影片名标签 / Generate movie title tags
     if [ -n "$TITLE_CN" ] && [ "$TITLE_CN" != "null" ]; then
-        TITLE_CN_CLEAN=$(echo "$TITLE_CN" | sed 's/[^一-龥0-9a-zA-Z：。，！？；、（）《》“”‘’]//g')
+        TITLE_CN_CLEAN=$(echo "$TITLE_CN" | sed 's/[[:space:]#\!\?\.\:\*\&\%\@\$\(\)\+\=\~\^\|,;\"`'"'"']\+//g' | sed 's/[{}\[\]\\\/]//g')
         [ -n "$TITLE_CN_CLEAN" ] && TAG_CN="#$TITLE_CN_CLEAN" || TAG_CN=""
     else
         TAG_CN=""
