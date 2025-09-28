@@ -1,137 +1,204 @@
 # Film Notify Bot 部署指南
 
-**Film Notify Bot** 是一个 Telegram 机器人，用于自动监控最新数字发行电影，并将结构化消息发送到指定频道或群组。本文档将指导你完成前期准备、部署与运行。
+**中文 | [English](./DEPLOYMENT.en.md)**
+
+## 说明
+
+本文档为 Film Notify Bot 的完整部署说明。涵盖：前期准备、在 GitHub Actions 上运行、在本地或私有服务器部署，以及一些建议。
 
 ## 目录
 
-1. [前期准备](#前期准备)
-2. [GitHub Actions 部署](#github-actions-部署)
-3. [本地 / 私有服务器部署](#本地--私有服务器部署)
-4. [注意事项](#注意事项)
+1. [适用读者](#适用读者)
+2. [先决条件与术语](#先决条件与术语)
+3. [步骤预览](#步骤预览)
+4. [第 1 部分 在 MDBList 上创建自定义列表](#第-1-部分-在-mdblist-上创建自定义列表)
+5. [第 2 部分 获取所需 Key 与 ID](#第-2-部分-获取所需-key-与-id)
+6. [部署前检查清单](#部署前检查清单)
+7. [第 3 部分 在 GitHub Actions 上部署（推荐）](#第-3-部分-在-github-actions-上部署推荐)
+8. [第 4 部分 本地 / 私有服务器部署](#第-4-部分-本地--私有服务器部署)
+9. [注意事项与常见问题汇总](#注意事项与常见问题汇总)
 
----
+## 适用读者
 
-## 前期准备
+**适用读者**：具备基本命令行、GitHub 使用经验的开发者与运维人员。初学者亦可跟随本指南完成部署。
 
-在部署之前，需要先获取相关 API Key、创建自定义电影列表，并确定 Bot 的消息目标。
+**预估时间**：准备 Key 与列表（15–60 分钟）；GitHub Actions 配置（10–30 分钟）；本地部署（10–20 分钟）。
 
-### 1. 创建自定义电影列表
+## 先决条件与术语
 
-1. 打开 [MDBList 官网](https://mdblist.com/) 并登录。  
-2. 在首页设置过滤选项，如「Ratings」、「Additional filters」、「Lists」、「Streaming Services」、「Cast」等。  
-3. 示例规则（蒙太奇字幕组推荐）：
-   - 「Released」设置为 `d:14`：过去 14 天数字发行电影。  
-   - 「Upcoming」设置为 `1`：未来 1 天的电影。  
-   - 「Release date」从 `2025-01-01` 起，排除重置版电影。  
-   - 「IMDb Rating」设置 `7.0-10`，至少 1000 投票。  
-4. 点击「Search」查看结果，确认符合预期后点击「Create List」，填写描述。  
+* **MDBList**：用于筛选电影并生成自定义列表的服务。
+* **TMDB**：The Movie Database，用于补充影片元数据（时长、海报、简介等）。
+* **Telegram Bot**：用于把通知发送到群组或频道的 Bot（机器人）。
+* **sent_tmdb_ids.txt**：记录已发送的电影 ID，避免重复通知。
 
-> 新列表可能需要 30 分钟至 1 小时填充完成，请耐心等待。
+## 步骤预览
 
-### 2. 获取 MDBList API Key
+1. 在 MDBList 创建并填充列表（等待 30–60 分钟）。
+2. 获取 MDBList API Key、列表 ID、TMDB API Key、Telegram Bot Token 与 Chat ID。
+3. Fork 仓库 → 添加 Secrets → 删除 `scripts/sent_tmdb_ids.txt`。
+4. 手动触发 Actions 或等待定时任务，确认消息成功推送。
 
-1. 点击右上角用户名 → 「Preferences」 → 页面底部「API Access」。  
-2. 创建新的 API Key，并记录备用。
+## 第 1 部分 在 MDBList 上创建自定义列表
 
-### 3. 获取 TMDB API Key
+1. 打开 MDBList 并登录
 
-1. 打开 [TMDB 官网](https://www.themoviedb.org/) 并登录。  
-2. 点击头像 → 「Settings」 → 「API」 → 「Create」申请 Developer API Key。  
-3. 填写应用名称、摘要及个人信息（使用英语），提交后记录「API Key」。
+   * 访问 [https://mdblist.com](https://mdblist.com) 并在页面右上角用第三方账号登录。
+2. 设置筛选规则并创建列表（示例）：
 
-### 4. 获取 Telegram Bot Token
+   * Released：`d:14`（仅过去 14 天数字发行）
+   * Upcoming：`d:1`（纳入未来 1 天数字发行）
+   * Release date 起始：`2025-01-01`
+   * IMDb Rating：`7.0-10`，至少 `1000` votes
+   * 根据需要添加语言、地区或平台过滤
+3. 点击 **Search** 查看结果，确认规则后点击 **Create List** 创建列表。
+4. 等待 30–60 分钟，列表填充完成后即可使用。
 
-1. 打开 Telegram，搜索 [@BotFather](https://t.me/BotFather)。  
-2. 发送 `/newbot`，按照指示设置 Bot 名称和唯一用户名（必须以 Bot 结尾）。  
-3. 保存 BotFather 返回的 Token。
+## 第 2 部分 获取所需 Key 与 ID
 
-### 5. 获取 Telegram Chat ID
+### 获取 MDBList API Key
 
-1. 将 Bot 添加到目标群组或频道（频道需管理员权限）或直接与 Bot 聊天。  
-2. 访问以下链接（将 `<Bot Token>` 替换为你的 Bot Token）：  
-   ```text
-   https://api.telegram.org/bot<Bot Token>/getUpdates
-   ```
-3. 查找对应字段：
-   - 群组/频道： `"chat":{"id":-100XXXXXXXXX, ...}`  
-   - 个人账户： `"from":{"id":XXXXXXXX, ...}`  
-4. 保存这些 ID，后续脚本配置使用。注意群组和频道 ID 带前缀负号 `-`。
+1. 登录 MDBList，点击右上角用户名 → **Preferences** → **API Access**。
+2. 创建并保存 **API Key**。
 
-### 6. 获取 MDBList 列表 ID
+### 获取 MDBList 列表 ID
 
-1. 获取用户 ID：  
-   ```text
-   https://api.mdblist.com/user?apikey=<API Key>
-   ```
-   记录 `"user_id": XXXXX`。  
-2. 获取列表 ID：  
-   ```text
-   https://api.mdblist.com/lists/user/<XXXXX>?apikey=<API Key>
-   ```
-   记录 `"id": YYYYY`，用于脚本配置。
+1. 在浏览器访问以下链接获取 `user_id`（将 `<API Key>` 替换为你的 MDBList API Key）：
 
----
+```text
+https://api.mdblist.com/user?apikey=<API Key>
+```
 
-## GitHub Actions 部署
+2. 使用 `user_id` 查询列表并找到你创建列表的 `id`：
 
-1. **Fork 仓库**  
-   将官方仓库 fork 到自己的 GitHub 账号。  
+```text
+https://api.mdblist.com/lists/user/<USER_ID>?apikey=<API Key>
+```
 
-2. **设置 Secrets**  
-   在 **Settings → Secrets and variables → Actions → New repository secret** 添加：
-   - `MDBLIST_API_KEY`  
-   - `MDBLIST_LIST_ID`  
-   - `TMDB_API_KEY`  
-   - `TELEGRAM_BOT_TOKEN`  
-   - `TELEGRAM_CHAT_IDS`（多个用空格分隔）  
+> **提示**：若 API 返回错误或为空，请等待列表填充完成后重试。
 
-3. **清理历史数据文件**  
-   删除或清空 `film-notify-bot/scripts/sent_tmdb_ids.txt`，避免重复通知。  
+### 获取 TMDB API Key
 
-4. **修改脚本 Source 信息**  
-   ```bash
-   # Source: https://github.com/<你的用户名>/film-notify-bot/
-   ```
+1. 登录 [https://www.themoviedb.org](https://www.themoviedb.org) → Settings → API → 申请 Developer API Key。
 
-5. **启动 Workflow**  
-   在 **Actions** 页面找到 `Film Notify Bot`，点击 **Run workflow** 测试运行。后续按计划自动执行。
+   > **提示**：复制 **API Key** 而非 Read Access Token。
+2. 验证是否可用，在浏览器打开下方链接，若无报错则可用：
 
----
+```text
+https://api.themoviedb.org/3/configuration?api_key=<API Key>
+```
 
-## 本地 / 私有服务器部署
+> **提示**：TMDB Developer API 禁止商业用途，如需商业使用请联系 TMDB。
 
-1. **环境要求**  
-   - bash v4.0+（兼容 busybox shell）  
-   - jq  
-   - curl  
+### 获取 Telegram Bot Token 与 Chat ID
 
-2. **获取脚本**  
-   下载 `film-notify-bot/scripts/film_notify_bot.sh` 文件到本地。
+1. 在 Telegram 中与 [@BotFather](https://t.me/BotFather) 创建 Bot，保存 **Bot Token**。
+2. 将 Bot 加入群组或频道，若为频道请授予管理员权限。
+3. 在浏览器访问：
 
-3. **修改配置**  
-   ```bash
-   # Source: https://github.com/<你的用户名>/film-notify-bot/
-   MDBLIST_API_KEY="${MDBLIST_API_KEY}"
-   MDBLIST_LIST_ID="${MDBLIST_LIST_ID}"        # Watchlist ID
-   TMDB_API_KEY="${TMDB_API_KEY}"
-   TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"
-   TELEGRAM_CHAT_IDS="${TELEGRAM_CHAT_IDS}"  # 多个用空格分隔
-   ```
+```text
+https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getUpdates
+```
 
-4. **运行脚本**  
-   ```bash
-   bash film_notify_bot.sh
-   ```
-   - 会在同目录生成 `sent_tmdb_ids.txt` 用于去重。  
-   - 文件会自动删除超过一年的历史记录，无需手动管理。
+4. 在返回的 JSON 中查找 `"chat":{"id":-100XXXXXXXXX,...}` 或 `"from":{"id":XXXXXXXX,...}` 并保存 ID。
 
----
+> **提示**：群组或频道 ID 通常以 -100 开头，请保留前缀 `-`。
 
-## 注意事项
+调试命令示例（发送测试消息）：
 
-- **MDBList 免费账号限制**：每日 API 请求上限 1000 次。  
-- **账号活跃度**：
-  - 超过 90 天未登录，列表更新暂停。  
-  - 超过 120 天未登录，服务可能终止。  
-- **支持 MDBList**：建议通过赞助 2-5 欧元支持 MDBList 开发与维护，可避免限制影响。  
-  详情请参考：[MDBList Supporter](https://docs.mdblist.com/docs/supporter)
+```bash
+curl -s -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/sendMessage" \
+  -d chat_id="<CHAT_ID>" -d text="Film Notify Bot 测试消息"
+```
+
+若发送失败，请确认 Bot 已加入对话并具有权限。
+
+## 部署前检查清单
+
+* [ ] 已在 MDBList 创建并填充列表
+* [ ] MDBList API Key 已生成并保存
+* [ ] MDBList 列表 ID 已获取
+* [ ] TMDB API Key 已生成并保存
+* [ ] Telegram Bot 已创建并保存 Token
+* [ ] 目标 Chat ID 已获取（支持多个）
+
+## 第 3 部分 在 GitHub Actions 上部署（推荐）
+
+1. **Fork 或 clone 仓库**
+2. **添加 Repository secrets**（路径：Settings → Secrets and variables → Actions）：
+
+   * `MDBLIST_API_KEY`
+   * `MDBLIST_LIST_ID`
+   * `TMDB_API_KEY`
+   * `TELEGRAM_BOT_TOKEN`
+   * `TELEGRAM_CHAT_IDS`（多个用空格分隔，并在 Secrets 中用引号包裹，如 `"12345 67890 -100112233"`）
+   * `TELEGRAM_BUTTON_URL`（可选，Bot 消息按钮链接）
+3. **清理去重文件**：删除或清空 [`scripts/sent_tmdb_ids.txt`](./scripts/sent_tmdb_ids.txt)，避免跳过推送。
+4. **（可选）修改 [`README.md`](./README.md)**：调整状态徽章为你自己的仓库路径。
+5. **（可选）手动运行**：在 GitHub Actions → Film Notify Bot 页面点击 **Run workflow** 手动触发一次。
+6. **（可选）错开运行时间**：
+   修改 [`.github/workflows/film_notify_bot.yml`](.github/workflows/film_notify_bot.yml)，将 `- cron: '43 */6 * * *'` 中的 `43` 替换为 `1` 到 `59` 任意数字，即可错开运行时间。
+
+### 重要安全提醒
+
+在 GitHub Actions 环境中，**不要**将 API Key 或 Bot Token 写入代码库，所有敏感信息必须放入 Secrets。
+
+## 第 4 部分 本地 / 私有服务器部署
+
+1. **系统依赖**
+
+   * 操作系统：Linux / macOS / 其他类 Unix
+   * `bash`（建议 v4.0+）
+   * `jq`（解析 JSON 数据）
+   * `curl`（用于请求 API）
+
+2. **下载脚本**
+
+   * 下载 [`scripts/film_notify_bot.sh`](./scripts/film_notify_bot.sh) 至本地或服务器。
+
+3. **修改脚本变量**
+   打开脚本并替换以下变量：（例：`MDBLIST_LIST_ID="123456"`）
+
+   > **重要安全提醒**：仅在安全环境下将 API Key 和 Token 写入脚本，请妥善保护文件权限。
+
+```bash
+MDBLIST_API_KEY="abcdefg"
+MDBLIST_LIST_ID="123456"
+TMDB_API_KEY="abcdefg"
+TELEGRAM_BOT_TOKEN="1234:abcd"
+TELEGRAM_CHAT_IDS="12345 -100112233"
+TELEGRAM_BUTTON_URL="https://example.com"
+```
+
+4. **运行脚本**
+   在脚本所在目录执行：
+
+```bash
+bash film_notify_bot.sh
+```
+
+> **提示**：脚本会在目录下生成 `sent_tmdb_ids.txt` 文件，记录已发送电影，避免重复。
+> 超过一年的历史记录会自动删除。
+> 若需重置或重新发送全部通知，删除该文件即可：`rm -f /path/to/scripts/sent_tmdb_ids.txt`。
+
+## 注意事项与常见问题汇总
+
+1. **MDBList**
+
+   * 免费账号每日请求上限 1000 次，足以支持本项目常规使用。
+   * 若超过 90 天未登录，列表更新可能暂停；超过 120 天未登录，账号可能被终止。
+
+2. **TMDB**
+
+   * Developer API 禁止用于商业用途，如需商业授权请联系 TMDB。
+
+3. **支持 MDBList 和 TMDB**
+
+   * 若希望服务持续运行，建议按官方方式赞助 MDBList 与 TMDB。
+
+4. **滥用警告**
+
+   * 禁止任何形式的 API 滥用或未经授权的使用。
+   * 禁止对 GitHub 的滥用，必须遵守 GitHub 条款。
+   * 禁止未经同意的群发消息，避免骚扰。
+   * 请勿将本项目用于任何违法、违规或滥用目的。
+
