@@ -2,7 +2,7 @@
 
 [![Film Notify Bot status](https://github.com/MontageSubs/film-notify-bot/actions/workflows/film_notify_bot.yml/badge.svg)](https://github.com/MontageSubs/film-notify-bot/actions/workflows/film_notify_bot.yml) | 
 [![Telegram](https://img.shields.io/badge/Telegram-订阅-blue?logo=telegram&style=flat-square)](https://t.me/+3drwnBP0yjszMmNh) | 
-[![IRC](https://img.shields.io/badge/IRC-加入聊天-brightgreen?logo=irc&style=flat-square)](https://web.libera.chat/#MontageSubs)
+[![IRC](https://img.shields.io/badge/IRC-加入聊天-orange?logo=irc&style=flat-square)](https://web.libera.chat/#MontageSubs)
 
 
 **中文 | [English](./README.en.md)**
