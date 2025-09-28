@@ -3,13 +3,12 @@ name: Film Notify Bot
 # ---------------- 触发条件 / Triggers ----------------
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '43 */6 * * *'
   workflow_dispatch:        # 允许手动触发 / Allow manual trigger
 
 # ---------------- 权限 / Permissions ----------------
 permissions:
   contents: write  # 允许写入仓库内容（提交去重文件） / Allow writing to repo for dedup file commit
-  workflows: write
 
 jobs:
   notify:
