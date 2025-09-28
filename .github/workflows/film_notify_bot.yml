@@ -3,7 +3,7 @@ name: Film Notify Bot
 # ---------------- 触发条件 / Triggers ----------------
 on:
   schedule:
-    - cron: '0 */6 * * *'   # 每 6 小时运行一次 / Run every 6 hours
+    - cron: '0 */6 * * *'
   workflow_dispatch:        # 允许手动触发 / Allow manual trigger
 
 # ---------------- 权限 / Permissions ----------------
@@ -51,4 +51,14 @@ jobs:
             git push
           else
             echo "[INFO] No changes to commit."
+          fi
+      # ---------------- 提交 workflow cron 随机化 / Workflow cron randomized ----------------
+      - name: Commit workflow cron randomized
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/film_notify_bot.yml
+          if ! git diff --cached --quiet; then
+            git commit -m "update: workflow cron randomized"
+            git push
           fi
