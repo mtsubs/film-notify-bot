@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.6.1
+# Version: 1.7
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -54,11 +54,12 @@
 # 在 GitHub Actions 中，请勿直接修改此段。
 # 所有变量应通过仓库的 Repository Secrets 注入。
 # 请在仓库设置中的 “Secrets and variables” 中添加。
-MDBLIST_API_KEY="${MDBLIST_API_KEY}"       # MDBList API Key / MDblist API 密钥
+MDBLIST_API_KEY="${MDBLIST_API_KEY}"       # MDBList API Key
 MDBLIST_LIST_ID="${MDBLIST_LIST_ID}"       # Watchlist ID / 监控列表 ID
-TMDB_API_KEY="${TMDB_API_KEY}"             # TMDB API Key / TMDB API 密钥
-TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}" # Telegram Bot Token / Telegram 机器人令牌
+TMDB_API_KEY="${TMDB_API_KEY}"             # TMDB API Key
+TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}" # Telegram Bot Token
 TELEGRAM_CHAT_IDS="${TELEGRAM_CHAT_IDS}"   # Target chat IDs (space separated) / 目标聊天 ID，可多个用空格分隔
+BUTTON_URL="${TELEGRAM_BUTTON_URL}"        # Telegram Button URL / Telegram 按钮链接
 
 # ---------------- 配置 / Configuration ----------------
 # Script directory / 脚本所在目录
@@ -66,9 +67,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Deduplication file to track sent TMDB IDs / 去重文件，用于记录已发送的 TMDB 电影 ID
 DEDUP_FILE="$SCRIPT_DIR/sent_tmdb_ids.txt"
-
-# Current date string (Shanghai timezone) / 当前日期字符串（上海时区）
-DATE_STR=$(TZ="Asia/Shanghai" date +"%m月%d日")
 
 # Maximum overview length / 简介最大长度，默认 300
 MAX_OVERVIEW_LEN="300"
@@ -246,7 +244,7 @@ format_score() {
     SCORE="$1"
     PROVIDER="$2"
     if [ "$SCORE" = "N/A" ] || [ -z "$SCORE" ]; then
-        echo "暂无评分"
+        echo "暂无"
     else
         case "$PROVIDER" in
             imdb) echo "$SCORE / 10" ;;
@@ -263,11 +261,20 @@ format_score() {
 # Function: Send message via Telegram bot
 send_telegram() {
     MSG="$1"
+    BUTTONS_JSON="$(cat <<EOF
+{
+    "inline_keyboard":[
+        [{"text":"新片推荐", "url":"$BUTTON_URL"}]
+    ]
+}
+EOF
+)"
     for CHAT_ID in $TELEGRAM_CHAT_IDS; do
         curl -s -A "$UA_STRING" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="$CHAT_ID" \
             -d text="$MSG" \
-            -d parse_mode="HTML" >/dev/null
+            -d parse_mode="HTML" \
+            -d reply_markup="$BUTTONS_JSON" >/dev/null
     done
 }
 
@@ -373,6 +380,22 @@ generate_and_send_msg() {
     TITLE_CN="$(echo "$TMDB_JSON" | jq -r '.title')"
     TITLE_EN="$(echo "$TMDB_JSON" | jq -r '.original_title')"
 
+    # 生成电影片名标签 / Generate movie title tags
+    if [ -n "$TITLE_CN" ] && [ "$TITLE_CN" != "null" ]; then
+        TITLE_CN_CLEAN=$(echo "$TITLE_CN" | sed 's/[^一-龥，。！？；：]//g')
+        TAG_CN="#${TITLE_CN_CLEAN}"
+    else
+        TAG_CN=""
+    fi
+    if [ -n "$TITLE_EN" ] && [ "$TITLE_EN" != "null" ]; then
+        TITLE_EN_CLEAN=$(echo "$TITLE_EN" | sed 's/[^A-Za-z0-9]//g')
+        TAG_EN="#${TITLE_EN_CLEAN}"
+    else
+        TAG_EN=""
+    fi
+    TAGS="$TAG_CN $TAG_EN"
+    TAGS="$(echo "$TAGS" | sed 's/^ *//;s/ *$//')" 
+
     # 从上映日期提取年份 / Extract release year from release date
     RELEASE_YEAR="$(echo "$TMDB_JSON" | jq -r '.release_date' | cut -d- -f1)"
 
@@ -383,8 +406,26 @@ generate_and_send_msg() {
     # 获取电影时长（分钟） / Get movie runtime in minutes
     RUNTIME="$(echo "$TMDB_JSON" | jq -r '.runtime')"
 
+    # 换算成小时+分钟 / Conversion time
+    if [ "$RUNTIME" -ge 60 ]; then
+        HOURS="$((RUNTIME / 60))"
+        MINUTES="$((RUNTIME % 60))"
+        RUNTIME_DISPLAY="${RUNTIME} 分钟 （${HOURS} 小时 ${MINUTES} 分钟）"
+    else
+        RUNTIME_DISPLAY="${RUNTIME} 分钟"
+    fi
+
     # 获取电影类型 / Get movie genres
     GENRES="$(echo "$TMDB_JSON" | jq -r '[.genres[].name] | join(" / ")')"
+    if [ -n "$GENRES_RAW" ] && [ "$GENRES_RAW" != "null" ]; then
+        IFS=' / ' read -ra GEN_ARRAY <<< "$GENRES_RAW"
+        GENRES=""
+        for g in "${GEN_ARRAY[@]}"; do
+            G_CLEAN=$(echo "$g" | sed 's/[^一-龥，。！？；：]//g')
+            [ -n "$G_CLEAN" ] && GENRES="$GENRES#$G_CLEAN / "
+        done
+        GENRES="${GENRES% / }"
+    fi
 
     # 获取电影语言 / Get spoken languages
     LANGS="$(echo "$TMDB_JSON" | jq -r '.spoken_languages[].iso_639_1')"
@@ -407,15 +448,20 @@ generate_and_send_msg() {
         echo -n "$(company_map "$co") / "
     done)"
     COMPANIES_CN="$(echo "$COMPANIES_CN" | sed 's: / $::')"
- 
- # 构造 IMDb 链接 / Construct IMDb URL
+
+    # 构造 IMDb 链接 / Construct IMDb URL
     IMDB_ID="$(echo "$TMDB_JSON" | jq -r '.imdb_id')"
     IMDB_URL="https://www.imdb.com/title/${IMDB_ID}"
 
     # 获取美国可租/可买平台 / Get US rent/buy providers
     ONLINE_STREAMS="$(curl -s -A "$UA_STRING" "https://api.themoviedb.org/3/movie/${TMDB_ID}/watch/providers?api_key=${TMDB_API_KEY}" \
         | jq -r '[.results.US.rent[]?.provider_name, .results.US.buy[]?.provider_name] | unique | join(" / ")')"
-    [ -z "$ONLINE_STREAMS" ] && ONLINE_STREAMS="已上线，暂无法确定提供平台"
+    [ -z "$ONLINE_STREAMS" ] && ONLINE_STREAMS="暂无上线信息"
+
+    # 获取上映日期 / Get release date
+    MDB_MOVIE_JSON=$(curl -s -A "$UA_STRING" "https://api.mdblist.com/tmdb/movie/${TMDB_ID}?apikey=${MDBLIST_API_KEY}&append_to_response=keyword&format=json")
+    RELEASED_CINEMA=$(echo "$MDB_MOVIE_JSON" | jq -r '.released // "未定"')
+    RELEASED_DIGITAL=$(echo "$MDB_MOVIE_JSON" | jq -r '.released_digital // "未上线"')
 
     # 将各类评分格式化显示 / Format different scores
     RATING_IMDB_F="$(format_score "$RATING_IMDB" "imdb")"
@@ -425,14 +471,17 @@ generate_and_send_msg() {
     AVG_SCORE_F="$(format_score "$AVG_SCORE" "avg")"
 
     # 将所有信息拼接为一条消息 / Combine all info into one message
-    MSG="$DATE_STR - 《$TITLE_CN （$TITLE_EN）》 （$RELEASE_YEAR） 已上线
+    MSG="《$TITLE_CN （$TITLE_EN）》 （$RELEASE_YEAR） 已上线
 
 简介：$OVERVIEW
+
+影院上映：$RELEASED_CINEMA
+数字上线：$RELEASED_DIGITAL
 
 语言：$LANG_CN
 国家：$COUNTRIES_CN
 类型：$GENRES
-时长：$RUNTIME 分钟
+时长：$RUNTIME_DISPLAY
 发行商：$COMPANIES_CN
 在线发行：$ONLINE_STREAMS
 
@@ -440,7 +489,8 @@ generate_and_send_msg() {
 网友评分：IMDb $RATING_IMDB_F | Letterboxd $RATING_LETTERBOXD_F
 专业评分：Metacritic $RATING_METACRITIC_F | RogerEbert $RATING_ROGEREBERT_F
 
-IMDb：$IMDB_URL"
+IMDb：$IMDB_URL
+$TAGS"
     log_info "$MSG"
     send_telegram "$MSG" # 调用发送函数 / Call send function
 }
@@ -469,7 +519,7 @@ clean_old_dedup() {
 
 # ---------------- 主流程 / Main Flow ----------------
 # Get script version from header / 从脚本头部获取版本号
-VERSION=$(grep -m1 '^# Version:' "$0" | awk '{print $3}')
+VERSION="$(grep -m1 '^# Version:' "$0" | awk '{print $3}')"
 # Set SOURCE_URL and UA_STRING dynamically based on environment / 根据运行环境动态设置 Source 和 UserAgent
 if [ -n "$GITHUB_REPOSITORY" ]; then
     SOURCE_URL="https://github.com/${GITHUB_REPOSITORY}"
