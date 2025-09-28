@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.7
+# Version: 1.7.1
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -261,14 +261,10 @@ format_score() {
 # Function: Send message via Telegram bot
 send_telegram() {
     MSG="$1"
-    BUTTONS_JSON="$(cat <<EOF
-{
-    "inline_keyboard":[
-        [{"text":"新片推荐", "url":"$BUTTON_URL"}]
-    ]
-}
-EOF
-)"
+    BUTTONS_JSON="$(jq -n --arg url "$BUTTON_URL" '{
+        inline_keyboard: [[{text: "新片推荐", url: $url}]]
+    }')"
+
     for CHAT_ID in $TELEGRAM_CHAT_IDS; do
         curl -s -A "$UA_STRING" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="$CHAT_ID" \
@@ -382,19 +378,26 @@ generate_and_send_msg() {
 
     # 生成电影片名标签 / Generate movie title tags
     if [ -n "$TITLE_CN" ] && [ "$TITLE_CN" != "null" ]; then
-        TITLE_CN_CLEAN=$(echo "$TITLE_CN" | sed 's/[^一-龥，。！？；：]//g')
-        TAG_CN="#${TITLE_CN_CLEAN}"
+        TITLE_CN_CLEAN=$(echo "$TITLE_CN" | sed 's/[[:space:][:punct:]]//g')
+        [ -n "$TITLE_CN_CLEAN" ] && TAG_CN="#$TITLE_CN_CLEAN" || TAG_CN=""
     else
         TAG_CN=""
     fi
     if [ -n "$TITLE_EN" ] && [ "$TITLE_EN" != "null" ]; then
-        TITLE_EN_CLEAN=$(echo "$TITLE_EN" | sed 's/[^A-Za-z0-9]//g')
-        TAG_EN="#${TITLE_EN_CLEAN}"
+        TITLE_EN_CLEAN=$(echo "$TITLE_EN" | sed 's/[[:space:][:punct:]]//g')
+        [ -n "$TITLE_EN_CLEAN" ] && TAG_EN="#$TITLE_EN_CLEAN" || TAG_EN=""
     else
         TAG_EN=""
     fi
-    TAGS="$TAG_CN $TAG_EN"
-    TAGS="$(echo "$TAGS" | sed 's/^ *//;s/ *$//')" 
+    if [ -n "$TAG_CN" ] && [ -n "$TAG_EN" ]; then
+        TAGS="$TAG_CN $TAG_EN"
+    elif [ -n "$TAG_CN" ]; then
+        TAGS="$TAG_CN"
+    elif [ -n "$TAG_EN" ]; then
+        TAGS="$TAG_EN"
+    else
+        TAGS=""
+    fi
 
     # 从上映日期提取年份 / Extract release year from release date
     RELEASE_YEAR="$(echo "$TMDB_JSON" | jq -r '.release_date' | cut -d- -f1)"
@@ -416,12 +419,12 @@ generate_and_send_msg() {
     fi
 
     # 获取电影类型 / Get movie genres
-    GENRES="$(echo "$TMDB_JSON" | jq -r '[.genres[].name] | join(" / ")')"
+    GENRES_RAW="$(echo "$TMDB_JSON" | jq -r '[.genres[].name] | join(" / ")')"
+    GENRES=""
     if [ -n "$GENRES_RAW" ] && [ "$GENRES_RAW" != "null" ]; then
         IFS=' / ' read -ra GEN_ARRAY <<< "$GENRES_RAW"
-        GENRES=""
         for g in "${GEN_ARRAY[@]}"; do
-            G_CLEAN=$(echo "$g" | sed 's/[^一-龥，。！？；：]//g')
+            G_CLEAN=$(echo "$g" | sed 's/[[:space:][:punct:]]//g')
             [ -n "$G_CLEAN" ] && GENRES="$GENRES#$G_CLEAN / "
         done
         GENRES="${GENRES% / }"
