@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.7.2
+# Version: 1.7.3
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -280,10 +280,16 @@ send_telegram() {
     }')"
 
     MSG_ESCAPED=$(jq -R -s <<< "$MSG")
-    curl -s -A "$UA_STRING" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        -H "Content-Type: application/json" \
-        -d "{\"chat_id\":\"$CHAT_ID\",\"text\":$MSG_ESCAPED,\"parse_mode\":\"HTML\",\"reply_markup\":$BUTTONS_JSON}"
 
+    for CHAT_ID in $TELEGRAM_CHAT_IDS; do
+        if [ -n "$CHAT_ID" ]; then
+            curl -s -A "$UA_STRING" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                -H "Content-Type: application/json" \
+                -d "{\"chat_id\":$CHAT_ID,\"text\":$MSG_ESCAPED,\"parse_mode\":\"HTML\",\"reply_markup\":$BUTTONS_JSON}" >/dev/null
+        else
+            echo "[WARN] Empty CHAT_ID, skipping..."
+        fi
+    done
 }
 
 # ---------------- Token 检测 / Token Check ----------------
