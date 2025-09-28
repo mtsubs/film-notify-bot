@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.7.1
+# Version: 1.7.2
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -13,7 +13,6 @@
 #   formats the data into structured messages, and sends notifications via
 #   Telegram. It also maintains a deduplication record to avoid sending
 #   repeated notifications.
-#   
 #   本脚本用于监控蒙太奇字幕组关注的新数字电影发行，调用 TMDB 与
 #   MDblist API 获取电影详细信息，将数据格式化为结构化消息，并通过
 #   Telegram 发送通知。同时维护去重记录，避免重复发送消息。
@@ -259,19 +258,32 @@ format_score() {
 
 # 功能: 发送消息到 Telegram
 # Function: Send message via Telegram bot
+# send_telegram() {
+    # MSG="$1"
+    # BUTTONS_JSON="$(jq -n --arg url "$BUTTON_URL" '{
+        # inline_keyboard: [[{text: "新片推荐", url: $url}]]
+    # }')"
+
+    # for CHAT_ID in $TELEGRAM_CHAT_IDS; do
+        # curl -s -A "$UA_STRING" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            # -d chat_id="$CHAT_ID" \
+            # -d text="$MSG" \
+            # -d parse_mode="HTML" \
+            # -d reply_markup="$BUTTONS_JSON" >/dev/null
+    # done
+# }
+
 send_telegram() {
     MSG="$1"
     BUTTONS_JSON="$(jq -n --arg url "$BUTTON_URL" '{
         inline_keyboard: [[{text: "新片推荐", url: $url}]]
     }')"
 
-    for CHAT_ID in $TELEGRAM_CHAT_IDS; do
-        curl -s -A "$UA_STRING" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d chat_id="$CHAT_ID" \
-            -d text="$MSG" \
-            -d parse_mode="HTML" \
-            -d reply_markup="$BUTTONS_JSON" >/dev/null
-    done
+    MSG_ESCAPED=$(jq -R -s <<< "$MSG")
+    curl -s -A "$UA_STRING" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        -H "Content-Type: application/json" \
+        -d "{\"chat_id\":\"$CHAT_ID\",\"text\":$MSG_ESCAPED,\"parse_mode\":\"HTML\",\"reply_markup\":$BUTTONS_JSON}"
+
 }
 
 # ---------------- Token 检测 / Token Check ----------------
