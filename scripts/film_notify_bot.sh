@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.7.3
+# Version: 1.7.4
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -256,23 +256,6 @@ format_score() {
     fi
 }
 
-# 功能: 发送消息到 Telegram
-# Function: Send message via Telegram bot
-# send_telegram() {
-    # MSG="$1"
-    # BUTTONS_JSON="$(jq -n --arg url "$BUTTON_URL" '{
-        # inline_keyboard: [[{text: "新片推荐", url: $url}]]
-    # }')"
-
-    # for CHAT_ID in $TELEGRAM_CHAT_IDS; do
-        # curl -s -A "$UA_STRING" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            # -d chat_id="$CHAT_ID" \
-            # -d text="$MSG" \
-            # -d parse_mode="HTML" \
-            # -d reply_markup="$BUTTONS_JSON" >/dev/null
-    # done
-# }
-
 send_telegram() {
     MSG="$1"
     BUTTONS_JSON="$(jq -n --arg url "$BUTTON_URL" '{
@@ -286,8 +269,6 @@ send_telegram() {
             curl -s -A "$UA_STRING" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
                 -H "Content-Type: application/json" \
                 -d "{\"chat_id\":$CHAT_ID,\"text\":$MSG_ESCAPED,\"parse_mode\":\"HTML\",\"reply_markup\":$BUTTONS_JSON}" >/dev/null
-        else
-            echo "[WARN] Empty CHAT_ID, skipping..."
         fi
     done
 }
@@ -506,7 +487,7 @@ generate_and_send_msg() {
 发行商：$COMPANIES_CN
 在线发行：$ONLINE_STREAMS
 
-综合评价：$AVG_SCORE_F
+综合评分：$AVG_SCORE_F
 网友评分：IMDb $RATING_IMDB_F | Letterboxd $RATING_LETTERBOXD_F
 专业评分：Metacritic $RATING_METACRITIC_F | RogerEbert $RATING_ROGEREBERT_F
 
