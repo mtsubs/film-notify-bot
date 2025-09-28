@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Name: film_notify_bot.sh
-# Version: 1.5.1
+# Version: 1.6
 # Organization: MontageSubs (蒙太奇字幕组)
 # Contributors: Meow P (小p)
 # License: MIT License
@@ -46,22 +46,32 @@
 #     格式化电影消息打印到 stdout（或通过 Telegram 发送）
 #     更新 'sent_tmdb_ids.txt' 文件，记录已处理的电影 ID
 
+# ---------------- API Keys and IDs / API Key 与列表 ID ----------------
+# WARNING / 警告
+# In GitHub Actions, do NOT modify this section directly.
+# All variables should be provided via repository Secrets.
+# Please add them in the repository settings under "Secrets and variables".
+# 在 GitHub Actions 中，请勿直接修改此段。
+# 所有变量应通过仓库的 Repository Secrets 注入。
+# 请在仓库设置中的 “Secrets and variables” 中添加。
+MDBLIST_API_KEY="${MDBLIST_API_KEY}"       # MDBList API Key / MDblist API 密钥
+MDBLIST_LIST_ID="${MDBLIST_LIST_ID}"       # Watchlist ID / 监控列表 ID
+TMDB_API_KEY="${TMDB_API_KEY}"             # TMDB API Key / TMDB API 密钥
+TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}" # Telegram Bot Token / Telegram 机器人令牌
+TELEGRAM_CHAT_IDS="${TELEGRAM_CHAT_IDS}"   # Target chat IDs (space separated) / 目标聊天 ID，可多个用空格分隔
 
 # ---------------- 配置 / Configuration ----------------
-VERSION=$(grep -m1 '^# Version:' "$0" | awk '{print $3}')
-SOURCE_URL=$(grep -m1 '^# Source:' "$0" | awk '{print $3}')
-UA_STRING="film_notify_bot/$VERSION (+$SOURCE_URL)"            # 用户代理 / User agent string
+# Script directory / 脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DEDUP_FILE="$SCRIPT_DIR/sent_tmdb_ids.txt"                     # 去重文件 / Deduplication file
-DATE_STR=$(TZ="Asia/Shanghai" date +"%m月%d日")                 # 当前日期 / Current date
 
-MDBLIST_API_KEY="${MDBLIST_API_KEY}"
-MDBLIST_LIST_ID="${MDBLIST_LIST_ID}"                            # 监控的列表 ID / Watchlist ID
-TMDB_API_KEY="${TMDB_API_KEY}"
-TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"
-TELEGRAM_CHAT_IDS="${TELEGRAM_CHAT_IDS}"                        # 支持多个，用空格分隔 / Multiple chat IDs
+# Deduplication file to track sent TMDB IDs / 去重文件，用于记录已发送的 TMDB 电影 ID
+DEDUP_FILE="$SCRIPT_DIR/sent_tmdb_ids.txt"
 
-MAX_OVERVIEW_LEN="500"                                          # 简介最大长度，默认500 / Max overview length, Default: 500
+# Current date string (Shanghai timezone) / 当前日期字符串（上海时区）
+DATE_STR=$(TZ="Asia/Shanghai" date +"%m月%d日")
+
+# Maximum overview length / 简介最大长度，默认 300
+MAX_OVERVIEW_LEN="300"
 
 # 确保去重文件存在 / Ensure dedup file exists
 [ ! -f "$DEDUP_FILE" ] && touch "$DEDUP_FILE"
@@ -313,6 +323,40 @@ check_dependencies() {
     fi
 }
 
+# ---------------- 随机化 GitHub Actions cron 基于注释 / Randomize GitHub Actions cron based on comment ----------------
+randomize_github_cron() {
+    WORKFLOW_FILE="$SCRIPT_DIR/../.github/workflows/film_notify_bot.yml"
+
+    # 仅在 GitHub Actions 环境下执行 / Only execute in GitHub Actions environment
+    if [ -z "$GITHUB_REPOSITORY" ]; then
+        return
+    fi
+
+    CRON_LINE=$(grep "cron:" "$WORKFLOW_FILE" | head -n1)
+    COMMENT_REPO=$(echo "$CRON_LINE" | sed -n 's/.*Randomized:1 repo:\([a-zA-Z0-9_.-\/]*\).*/\1/p')
+    NEED_RANDOM=0
+
+    if [ "$COMMENT_REPO" != "$GITHUB_REPOSITORY" ]; then
+        NEED_RANDOM=1
+    else
+        echo "$CRON_LINE" | grep -q "Randomized:1"
+        if [ $? -ne 0 ]; then
+            NEED_RANDOM=1
+        fi
+    fi
+
+    if [ "$NEED_RANDOM" -eq 1 ]; then
+        HOUR=$(expr $RANDOM % 24)
+        MIN=$(expr $RANDOM % 60)
+        TMP_FILE="${WORKFLOW_FILE}.tmp"
+        sed "s/cron:.*/cron: '$MIN $HOUR-23\/6 * * *'  # Randomized:1 repo:${GITHUB_REPOSITORY}/" "$WORKFLOW_FILE" > "$TMP_FILE"
+        mv "$TMP_FILE" "$WORKFLOW_FILE"
+
+        echo "[INFO] Workflow cron randomized to $MIN $HOUR-23/6"
+    else
+        echo "[INFO] Using existing randomized time, no cron modification needed"
+    fi
+}
 
 # ---------------- 数据获取 / Data Retrieval ----------------
 # 功能: 获取今日电影列表
@@ -459,9 +503,27 @@ clean_old_dedup() {
 }
 
 # ---------------- 主流程 / Main Flow ----------------
+# Get script version from header / 从脚本头部获取版本号
+VERSION=$(grep -m1 '^# Version:' "$0" | awk '{print $3}')
+# Set SOURCE_URL and UA_STRING dynamically based on environment / 根据运行环境动态设置 Source 和 UserAgent
+if [ -n "$GITHUB_REPOSITORY" ]; then
+    SOURCE_URL="https://github.com/${GITHUB_REPOSITORY}"
+    UA_STRING="film_notify_bot/$VERSION (+$SOURCE_URL; GitHub Actions)"
+else
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        SYS_INFO="${NAME}-${VERSION_ID}"
+    else
+        SYS_INFO="$(uname -s)-$(uname -r)"
+    fi
+    SOURCE_URL="local://${SYS_INFO}"
+    UA_STRING="film_notify_bot/$VERSION (+$SOURCE_URL; Local)"
+fi
+log_info "User-Agent: $UA_STRING"
 check_env_vars
 check_dependencies
 check_tokens
+randomize_github_cron
 clean_old_dedup
 get_movie_list
 
